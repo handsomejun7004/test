@@ -1,58 +1,52 @@
-import { useHabits } from './hooks/useHabits';
-import HabitForm from './components/habit/HabitForm';
-import TodayChecklist from './components/habit/TodayChecklist';
-import MonthCalendar from './components/habit/MonthCalendar';
-
-const today = new Date().toISOString().split('T')[0];
-const [year, month, day] = today.split('-');
-const dateLabel = `${year}년 ${Number(month)}월 ${Number(day)}일`;
-const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
-const weekday = WEEKDAY[new Date(today).getDay()];
+import { useEffect } from 'react';
+import { useTimer } from './hooks/useTimer';
+import TimerDisplay from './components/timer/TimerDisplay';
+import TimerControls from './components/timer/TimerControls';
+import SessionInfo from './components/timer/SessionInfo';
+import History from './components/timer/History';
+import { PHASE_LABELS, PHASE_COLORS } from './types/timer';
 
 export default function App() {
-  const { habits, addHabit, deleteHabit, toggleLog, isDone, getStreak, getMonthLogs } = useHabits();
+  const { phase, secondsLeft, running, progress, focusCount, history, start, pause, reset, switchPhase, clearHistory } = useTimer();
+
+  // 탭 제목에 타이머 표시
+  useEffect(() => {
+    const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+    const secs = String(secondsLeft % 60).padStart(2, '0');
+    document.title = running ? `${mins}:${secs} — ${PHASE_LABELS[phase]}` : '포모도로 타이머';
+  }, [secondsLeft, running, phase]);
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-slate-800 border-b border-slate-700 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">🎯</span>
-            </div>
-            <h1 className="text-white font-bold text-lg">습관 트래커</h1>
+      <header className="border-b border-slate-800 px-4 py-4">
+        <div className="max-w-sm mx-auto flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: PHASE_COLORS[phase] }}>
+            <span className="text-white font-bold text-sm">⏱</span>
           </div>
-          <div className="text-right">
-            <p className="text-white text-sm font-medium">{dateLabel}</p>
-            <p className="text-slate-400 text-xs">{weekday}요일</p>
-          </div>
+          <h1 className="text-white font-bold text-lg">포모도로 타이머</h1>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {/* 오늘 체크리스트 */}
-        <TodayChecklist
-          habits={habits}
-          today={today}
-          isDone={isDone}
-          getStreak={getStreak}
-          onToggle={toggleLog}
-          onDelete={deleteHabit}
+      <main className="flex-1 max-w-sm mx-auto w-full px-4 py-8 space-y-6">
+        {/* 원형 타이머 */}
+        <TimerDisplay secondsLeft={secondsLeft} progress={progress} phase={phase} />
+
+        {/* 컨트롤 */}
+        <TimerControls
+          phase={phase}
+          running={running}
+          onStart={start}
+          onPause={pause}
+          onReset={reset}
+          onSwitch={switchPhase}
         />
 
-        {/* 습관 추가 폼 */}
-        <HabitForm onAdd={addHabit} />
+        {/* 세션 정보 */}
+        <SessionInfo focusCount={focusCount} phase={phase} />
 
-        {/* 월간 캘린더 */}
-        {habits.length > 0 && (
-          <MonthCalendar
-            habits={habits}
-            getMonthLogs={getMonthLogs}
-            today={today}
-            onToggle={toggleLog}
-          />
-        )}
+        {/* 히스토리 */}
+        <History history={history} onClear={clearHistory} />
       </main>
     </div>
   );
