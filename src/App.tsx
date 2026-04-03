@@ -1,71 +1,58 @@
-import { useState, useMemo } from 'react';
-import { useTransactions } from './hooks/useTransactions';
-import TransactionForm from './components/budget/TransactionForm';
-import SummaryCards from './components/budget/SummaryCards';
-import CategoryChart from './components/budget/CategoryChart';
-import MonthlyChart from './components/budget/MonthlyChart';
-import TransactionList from './components/budget/TransactionList';
+import { useHabits } from './hooks/useHabits';
+import HabitForm from './components/habit/HabitForm';
+import TodayChecklist from './components/habit/TodayChecklist';
+import MonthCalendar from './components/habit/MonthCalendar';
+
+const today = new Date().toISOString().split('T')[0];
+const [year, month, day] = today.split('-');
+const dateLabel = `${year}년 ${Number(month)}월 ${Number(day)}일`;
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+const weekday = WEEKDAY[new Date(today).getDay()];
 
 export default function App() {
-  const { transactions, addTransaction, deleteTransaction } = useTransactions();
-
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-
-  const months = useMemo(() => {
-    const set = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
-    set.add(currentMonth);
-    return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [transactions, currentMonth]);
-
-  const monthlyTxs = useMemo(
-    () => transactions.filter((tx) => tx.date.startsWith(selectedMonth)),
-    [transactions, selectedMonth]
-  );
-
-  const income = useMemo(() => monthlyTxs.filter((tx) => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0), [monthlyTxs]);
-  const expense = useMemo(() => monthlyTxs.filter((tx) => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0), [monthlyTxs]);
+  const { habits, addHabit, deleteHabit, toggleLog, isDone, getStreak, getMonthLogs } = useHabits();
 
   return (
     <div className="min-h-screen bg-slate-900">
       {/* 헤더 */}
       <header className="bg-slate-800 border-b border-slate-700 px-4 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">가</span>
+            <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">🎯</span>
             </div>
-            <h1 className="text-white font-bold text-lg">가계부 대시보드</h1>
+            <h1 className="text-white font-bold text-lg">습관 트래커</h1>
           </div>
-          {/* 월 선택 */}
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
-          >
-            {months.map((m) => {
-              const [y, mo] = m.split('-');
-              return <option key={m} value={m}>{y}년 {Number(mo)}월</option>;
-            })}
-          </select>
+          <div className="text-right">
+            <p className="text-white text-sm font-medium">{dateLabel}</p>
+            <p className="text-slate-400 text-xs">{weekday}요일</p>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {/* 월별 요약 */}
-        <SummaryCards income={income} expense={expense} month={selectedMonth} />
+      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        {/* 오늘 체크리스트 */}
+        <TodayChecklist
+          habits={habits}
+          today={today}
+          isDone={isDone}
+          getStreak={getStreak}
+          onToggle={toggleLog}
+          onDelete={deleteHabit}
+        />
 
-        {/* 입력 폼 + 카테고리 차트 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TransactionForm onAdd={addTransaction} />
-          <CategoryChart transactions={monthlyTxs} />
-        </div>
+        {/* 습관 추가 폼 */}
+        <HabitForm onAdd={addHabit} />
 
-        {/* 월별 추이 차트 */}
-        <MonthlyChart transactions={transactions} />
-
-        {/* 거래 내역 */}
-        <TransactionList transactions={monthlyTxs} onDelete={deleteTransaction} />
+        {/* 월간 캘린더 */}
+        {habits.length > 0 && (
+          <MonthCalendar
+            habits={habits}
+            getMonthLogs={getMonthLogs}
+            today={today}
+            onToggle={toggleLog}
+          />
+        )}
       </main>
     </div>
   );
